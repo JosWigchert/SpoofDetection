@@ -17,7 +17,7 @@ class SpoofDetectSat:
     new_aval_id, new_aval_meas = [], {}
     Train, CalSat, CalGround = None, None, None
     TrainSatid, CalSatid, CalGroundid = 0, 0, 0
-    TestGround, TestSat = 0, 0
+    TestGround, TestSat = None, None
     TestGroundid, TestSatid = 0, 0
 
     nSamplePerImage = 0
@@ -217,6 +217,9 @@ class SpoofDetectSat:
             print("Creating folder: %s" % output_folder)
             os.makedirs(output_folder, exist_ok=True)
 
+            if C is None:
+                continue
+
             last = int(np.floor(C.shape[1] / nSamplePerImage))
             iq = np.reshape(C[:, 0 : (last * nSamplePerImage)], (nSamplePerImage, last))
             print("Generating images...")
@@ -371,8 +374,8 @@ class SpoofDetectSat:
 
 def main():
     ground = [
-        "mar-11-1",
-        "mar-11-2",
+        "mar-17-1",
+        "mar-17-2",
     ]
 
     sds = SpoofDetectSat()
@@ -381,17 +384,21 @@ def main():
     random_ids_2 = np.random.permutation(len(ground))
 
     sds.loadDataNew(
-        [sds.new_aval_id[i] for i in random_ids_1[0:-2]],
-        sds.new_aval_id[random_ids_1[-2]],
+        None,
+        None,
+        # [sds.new_aval_id[i] for i in random_ids_1[0:-2]],
+        # sds.new_aval_id[random_ids_1[-2]],
         ground[0],
-        sds.new_aval_id[random_ids_1[-1]],
+        None,
+        # sds.new_aval_id[random_ids_1[-1]],
         ground[1],
     )
 
-    sds.iqToImages(1000, "custom_1000")
-    sds.iqToImages(5000, "custom_5000")
-    sds.iqToImages(10000, "custom_10000")
-    sds.iqToImages(50000, "custom_50000")
+    # sds.iqToImages(1000, "custom_1000")
+    # sds.iqToImages(5000, "custom_5000")
+    # sds.iqToImages(10000, "custom_10000")
+    # sds.iqToImages(50000, "custom_50000")
+    sds.iqToImages(10000, "custom_test")
 
 
 def main2():
@@ -416,6 +423,6 @@ if __name__ == "__main__":
     import time
 
     time_start = time.perf_counter()
-    main2()
+    main()
     time_end = time.perf_counter()
     print("Execution time: %f" % (time_end - time_start))
