@@ -1,5 +1,4 @@
 import os
-from scipy.io import loadmat
 from tqdm import tqdm
 import numpy as np
 import h5py
@@ -30,25 +29,25 @@ class SpoofDetectSat:
 
     rndName = 0
 
-    sat_data_folder = "D:\\Data\\Jos\\fadeprint\\sat_data"
-    terrestrial_data_folder = "D:\\Data\\Jos\\fadeprint\\terrestrial_data"
+    # sat_data_folder = "D:\\Data\\Jos\\fadeprint\\sat_data"
+    # terrestrial_data_folder = "D:\\Data\\Jos\\fadeprint\\terrestrial_data"
 
-    new_sat_data_folder = "D:\\ProgrammingProjects\AI\\SpoofDetection\\data\\sat_data"
+    new_sat_data_folder = "D:\\ProgrammingProjects\\AI\\SpoofDetection\\data\\sat_data"
     new_terrestrial_data_folder = (
-        "D:\\ProgrammingProjects\AI\\SpoofDetection\\data\\terrestrial_data"
+        "D:\\ProgrammingProjects\\AI\\SpoofDetection\\data\\terrestrial_data"
     )
 
     def __init__(self):
-        files = os.scandir(self.sat_data_folder)
-        for entry in files:
-            if entry.path.endswith(".mat") and entry.is_file():
-                self.aval_id.append(entry.name[0:-4])
-        self.aval_id = np.array(self.aval_id)
+        # files = os.scandir(self.sat_data_folder)
+        # for entry in files:
+        #     if entry.path.endswith(".mat") and entry.is_file():
+        #         self.aval_id.append(entry.name[0:-4])
+        # self.aval_id = np.array(self.aval_id)
 
-        files = os.scandir(self.terrestrial_data_folder)
-        for i, entry in enumerate(files):
-            if entry.path.endswith(".iq") and entry.is_file():
-                self.aval_meas[i] = entry.name[0:-3]
+        # files = os.scandir(self.terrestrial_data_folder)
+        # for i, entry in enumerate(files):
+        #     if entry.path.endswith(".iq") and entry.is_file():
+        #         self.aval_meas[i] = entry.name[0:-3]
 
         # scan the new folders
         files = os.scandir(self.new_sat_data_folder)
@@ -87,10 +86,10 @@ class SpoofDetectSat:
     def loadData(
         self,
         TrainSatid: Iterable[int],
-        CalSatid: int | None,
-        CalGroundid: int | None,
-        TestSatid: int | None,
-        TestGroundid: int | None,
+        CalSatid,
+        CalGroundid,
+        TestSatid,
+        TestGroundid,
     ):
         self.TrainSatid = TrainSatid
         self.Train = []
@@ -142,10 +141,10 @@ class SpoofDetectSat:
     def loadDataNew(
         self,
         TrainSatid: list[str],
-        CalSatid: str | None,
-        CalGroundid: str | None,
-        TestSatid: str | None,
-        TestGroundid: str | None,
+        CalSatid,
+        CalGroundid,
+        TestSatid,
+        TestGroundid,
     ):
         self.TrainSatid = TrainSatid
         print("Loading Calibration Ground data...")
@@ -167,9 +166,10 @@ class SpoofDetectSat:
         print("Loading Calibration Sattelite data...")
         self.CalSatid = CalSatid
         if CalSatid is not None:
-            self.CalSat = SpoofDetectSat.__loadIQ(
+            iq_data = SpoofDetectSat.__loadIQ(
                 os.path.join(self.new_sat_data_folder, "%s.iq" % CalSatid)
             )
+            self.CalGround = iq_data[:, int(1e5) :]
 
         print("Loading Calibration Ground data...")
         self.CalGroundid = CalGroundid
@@ -222,7 +222,7 @@ class SpoofDetectSat:
 
             last = int(np.floor(C.shape[1] / nSamplePerImage))
             iq = np.reshape(C[:, 0 : (last * nSamplePerImage)], (nSamplePerImage, last))
-            print("Generating images...")
+            # print("Generating images...")
             Parallel().forEachTqdm(
                 [(iq[:, k], k, output_folder) for k in range(iq.shape[1])],
                 SpoofDetectSat.generateImage,
@@ -295,6 +295,8 @@ class SpoofDetectSat:
         # Plot scatter plot
         plt.figure()
 
+        output = {}
+
         for c in classes:
             C = getattr(self, c)
 
@@ -304,44 +306,59 @@ class SpoofDetectSat:
 
             last = int(np.floor(C.shape[1] / nSamplePerCsi))
             iq = np.reshape(C[:, 0 : (last * nSamplePerCsi)], (nSamplePerCsi, last))
-            print("Generating csi...")
+            # print("Generating csi...")
             csi = (
                 Parallel()
                 .forEachTqdm(
-                    [(iq[:, k], k) for k in range(iq.shape[1])],
+                    [iq[:, k] for k in range(iq.shape[1])],
                     SpoofDetectSat.generateCsi,
                     desc=f"Generating csi for {c}",
                 )
                 .join()
                 .result()
             )
+            output[c] = csi
 
-            rssi, snr, freq, phase = zip(*csi)
-            plt.scatter(rssi, snr, label=c, s=2)
+        #     (
+        #         frequency_offset,
+        #         channel_frequency_offset,
+        #         phase_offset,
+        #         phase_noise,
+        #         symbol_timing_offset,
+        #     ) = zip(*csi)
+        #     plt.scatter(channel_frequency_offset, symbol_timing_offset, label=c, s=2)
 
-        plt.xlabel("RSSI or Freq Offset")
-        plt.ylabel("SNR or Phase Offset")
-        plt.title("Frequency vs Phase Offset")
-        plt.legend()
-        plt.grid(True)
+        # plt.xlabel("RSSI or Freq Offset")
+        # plt.ylabel("SNR or Phase Offset")
+        # plt.title("Frequency vs Phase Offset")
+        # plt.legend()
+        # plt.grid(True)
         plt.show()
+        return output
 
-    def generateCsi(inp):
-        (iq_samples, k) = inp
-        # if k > 1:
-        #     return (0, 0)
+    def generateCsi(iq_samples):
+        """
+        Estimates various channel state information (CSI) parameters from input IQ samples.
 
-        # Signal Strength (RSSI)
-        rssi = np.mean(np.abs(iq_samples))  # Average magnitude of IQ samples
+        This function estimates frequency offset, phase offset, phase noise, symbol timing offset,
+        carrier frequency offset (CFO), and phase difference for refined CFO estimation from the input IQ samples.
 
-        # Signal-to-Noise Ratio (SNR)
-        # Assuming noise is the variance of the IQ samples
-        snr = np.mean(np.abs(iq_samples)) / np.std(np.abs(iq_samples))
+        Parameters:
+            - iq_samples (np.array(dtype.complex64)): Input IQ samples.
 
+        Returns:
+            tuple: A tuple containing the following CSI parameters:
+                - frequency_offset (float): Estimated frequency offset in Hertz.
+                - channel_frequency_offset (float): Estimated carrier frequency offset in Hertz.
+                - phase_offset (float): Estimated phase offset in radians.
+                - phase_noise (float): Estimated phase noise.
+                - symbol_timing_offset (int): Estimated symbol timing offset.
+        """
         sample_rate = 10_000_000
+
         # Frequency Offset Estimation
-        cir = np.correlate(iq_samples, iq_samples, mode="full")
-        cir = cir[len(cir) // 2 :]  # Keep only second half for positive lags
+        autocorr = np.correlate(iq_samples, iq_samples, mode="full")
+        cir = autocorr[len(autocorr) // 2 :]  # Keep only second half for positive lags
         autocorr_fft = np.fft.fft(cir)
         autocorr_fft_abs = np.abs(autocorr_fft)
 
@@ -349,27 +366,36 @@ class SpoofDetectSat:
         peak_index = np.argmax(autocorr_fft_abs)
         frequency_offset = (peak_index / len(cir)) * (sample_rate / 2)
 
-        # print("Estimated frequency offset:", frequency_offset)
-
-        # Plot autocorrelation
-        # plt.figure()
-        # plt.plot(np.arange(len(cir)), np.real(cir), label="Real Part")
-        # plt.plot(np.arange(len(cir)), np.imag(cir), label="Imaginary Part")
-        # # plt.plot(np.arange(len(autocorr)), np.abs(autocorr), label="Absolute Value")
-        # plt.title("Autocorrelation")
-        # plt.xlabel("Delay (samples)")
-        # plt.ylabel("Autocorrelation")
-        # plt.legend()
-        # plt.grid(True)
-        # plt.show()
-
         # Phase Offset Estimation
         phase_diff = np.angle(iq_samples[1:] / iq_samples[:-1])
         phase_offset = np.mean(phase_diff)
 
-        # print("Estimated phase offset:", phase_offset)
+        # CFO Estimation
+        downconverted_samples = iq_samples * np.exp(
+            -1j * 2 * np.pi * frequency_offset * np.arange(len(iq_samples))
+        )
 
-        return rssi, snr, frequency_offset, phase_offset
+        phase_diff_cfo = np.angle(
+            downconverted_samples[1:] * np.conj(downconverted_samples[:-1])
+        )
+        channel_frequency_offset = np.mean(phase_diff_cfo) / (
+            2 * np.pi * (1 / sample_rate)
+        )
+
+        # Phase Noise Estimation (Phase variation over time)
+        phase_noise = np.var(phase_diff)
+
+        # Symbol Timing Offset Estimation (Based on autocorrelation of the received signal)
+        max_autocorr_index = np.argmax(autocorr)
+        symbol_timing_offset = len(iq_samples) // 2 - max_autocorr_index
+
+        return (
+            frequency_offset,
+            channel_frequency_offset,
+            phase_offset,
+            phase_noise,
+            symbol_timing_offset,
+        )
 
 
 def main():
@@ -402,6 +428,7 @@ def main():
 
 
 def main2():
+
     ground = [
         "mar-11-1",
         "mar-11-2",
@@ -416,13 +443,40 @@ def main2():
         ground[1],
     )
 
-    sds.iqToCsi(10000)
+    csi = sds.iqToCsi(20000)
+
+    print(csi)
+
+
+def train_csi():
+    from csianomaly import get_datasets, train_model, evaluate_model
+
+    ground = [
+        "mar-11-1",
+        "mar-11-2",
+    ]
+
+    sds = SpoofDetectSat()
+    sds.loadDataNew(
+        sds.new_aval_id[2:],
+        sds.new_aval_id[0],
+        ground[0],
+        sds.new_aval_id[1],
+        ground[1],
+    )
+
+    csi = sds.iqToCsi(20000)
+    print(csi.keys())
+    # train_loader, val_loader, test_loader_normal, test_loader_anomalous = get_datasets(
+    #     csi["train"], csi["train"], csi["train"], csi["train"], csi["train"]
+    # )
 
 
 if __name__ == "__main__":
     import time
+    from csianomaly import *
 
     time_start = time.perf_counter()
-    main()
+    train_csi()
     time_end = time.perf_counter()
     print("Execution time: %f" % (time_end - time_start))
