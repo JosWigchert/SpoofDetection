@@ -71,7 +71,7 @@ class SpoofDetectSat:
     def __loadIQ(filename):
         data = np.fromfile(filename, dtype=np.complex64)
         data = data.reshape((1, -1))
-        return data
+        return data[:, int(1e6) :]
 
     def loadTrain(inp):
         (data_folder, sid) = inp
@@ -119,7 +119,7 @@ class SpoofDetectSat:
                 os.path.join(self.terrestrial_data_folder, "%s.iq" % CalGroundid)
             )
             # Remove the first 1e5 samples...
-            self.CalGround = iq_data[:, int(1e6) :]
+            self.CalGround = iq_data
 
         # Test datasets (Sat + Ground)
         print("Loading Test Sattelite data...")
@@ -136,7 +136,7 @@ class SpoofDetectSat:
                 os.path.join(self.terrestrial_data_folder, "%s.iq" % TestGroundid)
             )
             # Remove the first 1e5 samples...
-            self.TestGround = iq_data[:, int(1e6) :]
+            self.TestGround = iq_data
 
     def loadDataNew(
         self,
@@ -169,7 +169,7 @@ class SpoofDetectSat:
             iq_data = SpoofDetectSat.__loadIQ(
                 os.path.join(self.new_sat_data_folder, "%s.iq" % CalSatid)
             )
-            self.CalGround = iq_data[:, int(1e5) :]
+            self.CalSat = iq_data
 
         print("Loading Calibration Ground data...")
         self.CalGroundid = CalGroundid
@@ -178,7 +178,7 @@ class SpoofDetectSat:
                 os.path.join(self.new_terrestrial_data_folder, "%s.iq" % CalGroundid)
             )
             # Remove the first 1e5 samples...
-            self.CalGround = iq_data[:, int(1e5) :]
+            self.CalGround = iq_data
 
         # Test datasets (Sat + Ground)
         print("Loading Test Sattelite data...")
@@ -187,7 +187,7 @@ class SpoofDetectSat:
             iq_data = SpoofDetectSat.__loadIQ(
                 os.path.join(self.new_sat_data_folder, "%s.iq" % TestSatid)
             )
-            self.TestSat = iq_data[:, int(1e5) :]
+            self.TestSat = iq_data
 
         print("Loading Test Ground data...")
         self.TestGroundid = TestGroundid
@@ -196,7 +196,7 @@ class SpoofDetectSat:
                 os.path.join(self.new_terrestrial_data_folder, "%s.iq" % TestGroundid)
             )
             # Remove the first 1e5 samples...
-            self.TestGround = iq_data[:, int(1e5) :]
+            self.TestGround = iq_data
 
     def iqToImages(self, nSamplePerImage, name: str = None):
         self.nSamplePerImage = nSamplePerImage
@@ -400,8 +400,8 @@ class SpoofDetectSat:
 
 def main():
     ground = [
-        "mar-17-1",
-        "mar-17-2",
+        "apr1-1",
+        "apr1-2",
     ]
 
     sds = SpoofDetectSat()
@@ -410,13 +410,10 @@ def main():
     random_ids_2 = np.random.permutation(len(ground))
 
     sds.loadDataNew(
-        None,
-        None,
-        # [sds.new_aval_id[i] for i in random_ids_1[0:-2]],
-        # sds.new_aval_id[random_ids_1[-2]],
+        sds.new_aval_id[2:],
+        sds.new_aval_id[0],
         ground[0],
-        None,
-        # sds.new_aval_id[random_ids_1[-1]],
+        sds.new_aval_id[1],
         ground[1],
     )
 
@@ -424,7 +421,7 @@ def main():
     # sds.iqToImages(5000, "custom_5000")
     # sds.iqToImages(10000, "custom_10000")
     # sds.iqToImages(50000, "custom_50000")
-    sds.iqToImages(10000, "custom_test")
+    sds.iqToImages(50000, "custom_new_1622_50000")
 
 
 def main2():
