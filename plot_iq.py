@@ -7,7 +7,7 @@ from Parallel import Parallel
 def load_iq(filename):
     data = np.fromfile(filename, dtype=np.complex64)
     data = data.reshape((-1))
-    data = data[int(1e7) :]
+    data = data[int(1e7) : int(1.1e7)]
     return data
 
 
@@ -15,7 +15,7 @@ def plot_iq(iq_data, title=""):
     # load the first 10000 iq samples and plot them in a scatter plot form -1 to +1
 
     plt.figure()
-    plt.scatter(np.real(iq_data), np.imag(iq_data), label="IQ")
+    plt.scatter(np.real(iq_data), np.imag(iq_data), label="IQ", s=2)
     plt.xlabel("Real")
     plt.xlim(-3, 3)
     plt.ylabel("Imag")
@@ -27,7 +27,7 @@ def plot_iq(iq_data, title=""):
     plt.savefig(f"plots/{tit}_iq_1.png")
 
     plt.figure()
-    plt.scatter(np.real(iq_data[0:10000]), np.imag(iq_data[0:10000]), label="IQ")
+    plt.scatter(np.real(iq_data[0:10000]), np.imag(iq_data[0:10000]), label="IQ", s=2)
     plt.xlabel("Real")
     plt.xlim(-3, 3)
     plt.ylabel("Imag")
@@ -73,13 +73,13 @@ def work(path, name):
 
 def main():
     data = [
-        ("data/terrestrial_data/mar-18-noise-1.iq", "nothing"),
-        ("data/terrestrial_data/mar-18-noise-1.iq", "maybe autostart"),
-        ("data/terrestrial_data/mar-18-noise-2.iq", "noise without amp"),
-        ("data/terrestrial_data/mar-18-noise-4.iq", "noise with amp"),
-        ("data/terrestrial_data/mar-18-1.iq", "data no amp"),
-        ("data/terrestrial_data/mar-18-2.iq", "data"),
-        ("data/terrestrial_data/mar-18-3.iq", "other data"),
+        ("data/terrestrial_data/tx_qpsk_send.iq", "Send iq"),
+        # ("data/terrestrial_data/mar-18-noise-1.iq", "maybe autostart"),
+        # ("data/terrestrial_data/mar-18-noise-2.iq", "noise without amp"),
+        # ("data/terrestrial_data/mar-18-noise-4.iq", "noise with amp"),
+        # ("data/terrestrial_data/mar-18-1.iq", "data no amp"),
+        # ("data/terrestrial_data/mar-18-2.iq", "data"),
+        # ("data/terrestrial_data/mar-18-3.iq", "other data"),
     ]
 
     Parallel().forEachTqdm(data, parallel_work).join()

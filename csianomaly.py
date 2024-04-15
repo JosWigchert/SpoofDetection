@@ -5,29 +5,33 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 class AnomalyDetector(nn.Module):
-    def __init__(self, input_size, hidden_size1, hidden_size2):
+
+    def __init__(self, input_size, hidden_size1, hidden_size2, hidden_size3):
         super(AnomalyDetector, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size1)
         self.fc2 = nn.Linear(hidden_size1, hidden_size2)
-        self.fc3 = nn.Linear(hidden_size2, input_size)
+        self.fc3 = nn.Linear(hidden_size2, hidden_size3)
+        self.fc4 = nn.Linear(hidden_size3, input_size)
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         out = self.relu(self.fc1(x))
         out = self.relu(self.fc2(out))
-        out = self.sigmoid(self.fc3(out))
+        out = self.relu(self.fc3(out))
+        out = self.sigmoid(self.fc4(out))
         return out
 
 
 # Define the hyperparameters
 input_size = 5
-hidden_size1 = 10
-hidden_size2 = 5
-learning_rate = 0.001
+hidden_size1 = 128
+hidden_size2 = 256
+hidden_size3 = 128
+learning_rate = 0.01
 num_epochs = 100
 
-model = AnomalyDetector(input_size, hidden_size1, hidden_size2)
+model = AnomalyDetector(input_size, hidden_size1, hidden_size2, hidden_size3)
 
 # Define loss function and optimizer
 criterion = nn.MSELoss()
@@ -84,6 +88,7 @@ def train_model(train_loader, val_loader):
             for batch_data in val_loader:
                 inputs = batch_data[0]
                 outputs = model(inputs)
+                print(outputs)
                 loss = criterion(outputs, inputs)
                 val_loss += loss.item() * inputs.size(0)
 
@@ -103,6 +108,3 @@ def evaluate_model(loader):
             test_loss += loss.item() * inputs.size(0)
 
     return test_loss / len(loader.dataset)
-
-    print("Test Loss (Normal Data):", evaluate_model(test_loader_normal))
-    print("Test Loss (Anomalous Data):", evaluate_model(test_loader_anomalous))
