@@ -163,11 +163,15 @@ class SpoofDetectSat:
         fullFileName = "./%s/%i.tif" % (output_folder, k)
         Image.fromarray(H).save(fullFileName)
 
-    def iqToCsi(self, nSamplePerCsi):
+    def iqToCsi(self, nSamplePerCsi, name: str = None):
         self.nSamplePerImage = nSamplePerCsi
 
-        classes = ["Train", "CalSat", "CalGround", "TestSat", "TestGround"]
-        rndName = "".join(random.choice(string.ascii_lowercase) for _ in range(32))
+        classes = ["Satellite", "Ground"]
+        rndName = ""
+        if name is not None:
+            rndName = name
+        else:
+            rndName = "".join(random.choice(string.ascii_lowercase) for _ in range(32))
         self.rndName = rndName
 
         # Plot scatter plot
@@ -306,7 +310,10 @@ def main():
         ground,
     )
 
-    sds.iqToImages(50000, "autoencoder")
+    arr = sds.iqToCsi(5000, "autoencoder")
+    keys = arr.keys()
+    for key in keys:
+        arr[key].to_csv(f"data/{key}.csv", index=False)
 
 
 def train_csi():
@@ -333,9 +340,7 @@ def train_csi():
         )
 
         csi = sds.iqToCsi(10000)
-        keys = csi.keys()
-        for key in keys:
-            csi[key].to_csv(f"data/{key}.csv")
+        print(csi.keys())
 
         with open("data.json", "w") as f:
             json.dump(csi, f)
